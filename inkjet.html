@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inkjet Graphic Workflow Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-indigo-900 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-700 p-2 rounded-xl flex items-center justify-center">
+                    <i data-lucide="printer" class="w-6 h-6 text-cyan-300"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Inkjet Graphic Pro</h1>
+                    <p class="text-xs text-indigo-300">ระบบบริหารจัดการงานกราฟิกและติดตามคิวงาน</p>
+                </div>
+            </div>
+            
+            <!-- User Profile & Notifications -->
+            <div class="flex items-center space-x-4">
+                <!-- Notifications dropdown trigger -->
+                <div class="relative">
+                    <button onclick="toggleNotifModal()" class="relative p-2 text-indigo-200 hover:text-white transition rounded-full hover:bg-indigo-800">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                        <span id="notifBadge" class="absolute top-1 right-1 bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">3</span>
+                    </button>
+                </div>
+
+                <!-- Current User Role Selector (Simulation) -->
+                <div class="flex items-center space-x-2 bg-indigo-800 px-3 py-1.5 rounded-full border border-indigo-700">
+                    <div id="currentUserAvatar" class="w-7 h-7 rounded-full bg-cyan-500 text-indigo-950 font-bold flex items-center justify-center text-xs">HG</div>
+                    <div class="text-left hidden sm:block">
+                        <div id="currentUserName" class="text-xs font-semibold leading-tight">สมชาย (Head Graphic)</div>
+                        <div id="currentUserRole" class="text-[10px] text-indigo-300 leading-none">สิทธิ์: หัวหน้ากราฟิก</div>
+                    </div>
+                    <select id="userRoleSwitcher" onchange="switchUserRole(this.value)" class="bg-indigo-950 text-white text-xs rounded px-2 py-1 border border-indigo-600 focus:outline-none ml-2">
+                        <option value="head">สมชาย (Head Graphic - หัวหน้า)</option>
+                        <option value="graphic1">วิชัย (Graphic Designer)</option>
+                        <option value="graphic2">นภา (Graphic Designer)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Wrapper -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full flex flex-col md:flex-row gap-6">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-full md:w-64 shrink-0">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sticky top-24">
+                <nav class="space-y-1.5">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition bg-indigo-50 text-indigo-700">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        <span>แดชบอร์ด & ภาพรวม KPI</span>
+                    </button>
+                    <button onclick="switchTab('jobs')" id="nav-jobs" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-indigo-600">
+                        <i data-lucide="kanban" class="w-5 h-5"></i>
+                        <span>จัดการรายการงาน (Jobs)</span>
+                    </button>
+                    <button onclick="switchTab('newJob')" id="nav-newJob" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-indigo-600 restricted-head">
+                        <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                        <span>เพิ่มใบสั่งงานใหม่</span>
+                    </button>
+                    <button onclick="switchTab('staff')" id="nav-staff" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-indigo-600 restricted-head">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                        <span>จัดการพนักงาน & สกิล</span>
+                    </button>
+                    <button onclick="switchTab('otCalc')" id="nav-otCalc" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-indigo-600">
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                        <span>คำนวณ OT & ตารางเวลา</span>
+                    </button>
+                    <button onclick="switchTab('reports')" id="nav-reports" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-indigo-600">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                        <span>รายงาน & Google Sheet Export</span>
+                    </button>
+                </nav>
+
+                <!-- Quick OT Status Card in Sidebar -->
+                <div class="mt-6 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs">
+                    <div class="flex items-center space-x-2 font-semibold text-amber-800 mb-1">
+                        <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600"></i>
+                        <span>สถานะ OT วันนี้ (15:00 น.)</span>
+                    </div>
+                    <p class="text-amber-700 leading-relaxed">ทีมมีงานค้างรวม 8 งาน <span class="font-bold text-amber-900">แนะนำให้อยู่ OT 2 คน</span> (วิชัย, นภา)</p>
+                    <button onclick="switchTab('otCalc')" class="mt-2 text-[11px] font-semibold text-indigo-600 hover:underline flex items-center">
+                        ดูรายละเอียดคำนวณ OT &rarr;
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="flex-1 overflow-hidden">
+            
+            <!-- TAB 1: DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <!-- Top KPI Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">งานทั้งหมดในระบบ</p>
+                            <h3 id="statTotalJobs" class="text-2xl font-bold text-slate-900 mt-1">12</h3>
+                            <span class="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-1">กำลังดำเนินการ 8</span>
+                        </div>
+                        <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                            <i data-lucide="briefcase" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">อัตราส่งงานตรงเวลา (On-Time)</p>
+                            <h3 class="text-2xl font-bold text-emerald-600 mt-1">94.5%</h3>
+                            <span class="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-1">+2.4% จากสัปดาห์ก่อน</span>
+                        </div>
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                            <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">รอบแก้แบบเฉลี่ย (Revisions)</p>
+                            <h3 class="text-2xl font-bold text-amber-600 mt-1">1.4 รอบ</h3>
+                            <span class="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-1">เกณฑ์มาตรฐาน &lt; 2</span>
+                        </div>
+                        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                            <i data-lucide="repeat" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">ระยะเวลาปิดงานเฉลี่ย (TAT)</p>
+                            <h3 class="text-2xl font-bold text-indigo-600 mt-1">3.2 ชม.</h3>
+                            <span class="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full inline-block mt-1">ต่อ 1 ใบสั่งงาน</span>
+                        </div>
+                        <div class="p-3 bg-cyan-50 text-cyan-600 rounded-xl">
+                            <i data-lucide="zap" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Staff Individual Overview Filter Section -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm flex items-center space-x-2">
+                                <i data-lucide="users" class="w-4 h-4 text-indigo-600"></i>
+                                <span>เลือกดูงานภาพรวมรายบุคคล (Individual Staff Breakdown)</span>
+                            </h3>
+                            <p class="text-xs text-slate-500">คลิกที่ชื่อพนักงานเพื่อกรองดูเฉพาะงานในความรับผิดชอบและภาระงานปัจจุบัน</p>
+                        </div>
+                        <div id="dashboardStaffFilterChips" class="flex flex-wrap gap-2">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                    <!-- Selected Staff Quick Stat Banner -->
+                    <div id="selectedStaffStatBanner" class="hidden p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div id="bannerStaffAvatar" class="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs">ส</div>
+                            <div>
+                                <span id="bannerStaffName" class="font-bold text-indigo-950 text-sm">สมชาย (Head Graphic)</span>
+                                <p id="bannerStaffDetails" class="text-indigo-800 text-[11px]">งานในมือ: 3 งาน | เฉลี่ยเวลา: 2.1 ชม./งาน</p>
+                            </div>
+                        </div>
+                        <button onclick="filterDashboardByStaff('all')" class="text-indigo-600 hover:underline font-semibold text-xs">ล้างตัวกรอง</button>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-slate-800 text-base">สัดส่วนประเภทงานพิมพ์</h3>
+                            <span class="text-xs text-slate-400">ข้อมูลรายเดือน</span>
+                        </div>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="jobTypeChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-slate-800 text-base">ปริมาณงานในมือ (Workload Capacity)</h3>
+                            <span class="text-xs text-slate-400">หน่วย: จำนวน Job ค้าง</span>
+                        </div>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="workloadChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Jobs Quick Table -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h3 id="dashboardTableTitle" class="font-bold text-slate-800 text-base">งานเร่งด่วน & สถานะล่าสุด</h3>
+                            <p id="dashboardTableSubtitle" class="text-xs text-slate-500">ติดตามงานที่ต้องส่งมอบวันนี้</p>
+                        </div>
+                        <button onclick="switchTab('jobs')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800">ดูทั้งหมด &rarr;</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
+                                    <th class="p-4">เลขที่ใบสั่งงาน / ลูกค้า</th>
+                                    <th class="p-4">ประเภทงาน</th>
+                                    <th class="p-4">ผู้รับผิดชอบ</th>
+                                    <th class="p-4">ความสำคัญ</th>
+                                    <th class="p-4">สถานะปัจจุบัน</th>
+                                    <th class="p-4 text-right">กำหนดส่ง</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboardRecentJobsTable" class="divide-y divide-slate-100 text-slate-700">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: JOBS MANAGEMENT -->
+            <div id="tab-jobs" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800">จัดการรายการงานกราฟิก</h3>
+                            <p class="text-xs text-slate-500">ติดตามสถานะ อัปเดตงาน ส่งปรู๊ฟ และส่งต่อห้องพิมพ์</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div class="relative">
+                                <input type="text" id="jobSearchInput" onkeyup="filterJobs()" placeholder="ค้นหาเลขออเดอร์, ลูกค้า..." class="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 w-48">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                            </div>
+                            <select id="filterStatus" onchange="filterJobs()" class="bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
+                                <option value="">ทุกสถานะ</option>
+                                <option value="ได้รับใบสั่งงาน">ได้รับใบสั่งงาน</option>
+                                <option value="กำลังออกแบบ/ตรวจไฟล์">กำลังออกแบบ/ตรวจไฟล์</option>
+                                <option value="ส่งปรู๊ฟตรวจสอบ">ส่งปรู๊ฟตรวจสอบ</option>
+                                <option value="รอแก้ไข/คอนเฟิร์ม">รอแก้ไข/คอนเฟิร์ม</option>
+                                <option value="เตรียมไฟล์พิมพ์ (Layout)">เตรียมไฟล์พิมพ์ (Layout)</option>
+                                <option value="ส่งห้องพิมพ์/ไดคัท">ส่งห้องพิมพ์/ไดคัทแล้ว</option>
+                            </select>
+                            <button onclick="switchTab('newJob')" class="restricted-head bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                <span>เพิ่มใบสั่งงาน</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Jobs Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
+                                    <th class="p-3">เลขที่ใบสั่งงาน / ลูกค้า</th>
+                                    <th class="p-3">ประเภท & สเปก</th>
+                                    <th class="p-3">ระบบพิมพ์ & เครื่อง</th>
+                                    <th class="p-3">ผู้รับผิดชอบ</th>
+                                    <th class="p-3">ความสำคัญ</th>
+                                    <th class="p-3">สถานะ</th>
+                                    <th class="p-3 text-center">จัดการ / อัปเดต</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fullJobsTableBody" class="divide-y divide-slate-100 text-slate-700 text-xs">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: NEW JOB FORM -->
+            <div id="tab-newJob" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-4xl mx-auto">
+                    <div class="border-b border-slate-100 pb-4 mb-6 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800">เพิ่มใบสั่งงานใหม่ (Job Order)</h3>
+                            <p class="text-xs text-slate-500">สำหรับ Head Graphic หรือผู้ที่ได้รับมอบสิทธิ์ในการสร้างงาน</p>
+                        </div>
+                        <span class="bg-indigo-50 text-indigo-700 font-semibold px-3 py-1 rounded-full text-xs">Admin Mode</span>
+                    </div>
+
+                    <form id="newJobForm" onsubmit="handleCreateJob(event)" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">เลขที่ใบสั่งงาน *</label>
+                                <input type="text" id="jobNo" required placeholder="เช่น JOB-2026-009" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อบริษัท / ลูกค้า *</label>
+                                <input type="text" id="jobCustomer" required placeholder="เช่น บริษัท เอสซีจี จำกัด" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อสินค้า *</label>
+                                <input type="text" id="jobProduct" required placeholder="เช่น ป้าย Rollup หน้าร้าน" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">เลข PrintMaster</label>
+                                <input type="text" id="jobPM" placeholder="เช่น PM-99201" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Sale / Co-Sale</label>
+                                <input type="text" id="jobSale" placeholder="คุณก้อย / คุณบี" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">ระดับความสำคัญ</label>
+                                <select id="jobPriority" onchange="triggerSmartAssigneeRecommendation()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                                    <option value="งานปกติ">งานปกติ</option>
+                                    <option value="งานด่วน">งานด่วน</option>
+                                    <option value="งานด่วนมาก">งานด่วนมาก</option>
+                                    <option value="งานแทรกคิว">งานแทรกคิว (ด่วนพิเศษ)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">ประเภทงานกราฟิก</label>
+                                <select id="jobType" onchange="triggerSmartAssigneeRecommendation()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                                    <option value="1. งานออกแบบใหม่">1. งานออกแบบใหม่</option>
+                                    <option value="2. จัดทำเลย์เอ้าท์พิมพ์/ตรวจไฟล์">2. จัดทำเลย์เอ้าท์พิมพ์ & ตรวจสอบไฟล์</option>
+                                    <option value="3. จัดไฟล์ปรู๊ฟสี/ตัวอย่างงาน">3. จัดไฟล์ปรู๊ฟสี หรือ ตัวอย่างงาน</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">ระบบพิมพ์</label>
+                                <select id="jobSystem" onchange="triggerSmartAssigneeRecommendation()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                                    <option value="INDOOR">INDOOR</option>
+                                    <option value="OUTDOOR">OUTDOOR</option>
+                                    <option value="UV">UV</option>
+                                    <option value="Flatbed">Flatbed</option>
+                                    <option value="Offset/ส่งผลิตด้านนอก">Offset / ส่งผลิตด้านนอก</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">เครื่องพิมพ์</label>
+                                <select id="jobPrinter" onchange="triggerSmartAssigneeRecommendation()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                                    <option value="HP5800">HP5800</option>
+                                    <option value="EPSON">EPSON</option>
+                                    <option value="ORIC">ORIC</option>
+                                    <option value="Hantop">Hantop</option>
+                                    <option value="Latex">Latex</option>
+                                    <option value="Dilican">Dilican</option>
+                                    <option value="5M Dilican">5M Dilican</option>
+                                    <option value="3D Print">3D Print</option>
+                                    <option value="อักษรโลหะ">อักษรโลหะ</option>
+                                    <option value="งานช่าง (โครงไม้/เหล็ก)">งานช่าง (โครงไม้, โครงเหล็ก)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">ขนาด (Width x Height)</label>
+                                <input type="text" id="jobSize" placeholder="เช่น 100 x 200 ซม." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">จำนวน & เงื่อนไข</label>
+                                <input type="text" id="jobQty" placeholder="เช่น 1 แบบ 5 ชุด" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">สังกัดสถานที่งาน</label>
+                                <select id="jobBranch" onchange="triggerSmartAssigneeRecommendation()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                                    <option value="สำนักงานใหญ่">สำนักงานใหญ่</option>
+                                    <option value="หน้าร้าน">หน้าร้าน</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- SMART ASSIGNEE RECOMMENDATION SECTION -->
+                        <div class="p-4 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-bold text-indigo-950 text-xs flex items-center space-x-2">
+                                    <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600"></i>
+                                    <span>ระบบคำนวณแนะนำผู้รับผิดชอบที่เหมาะสม (Smart Assignment Calculation)</span>
+                                </h4>
+                                <span class="text-[10px] bg-indigo-200 text-indigo-900 font-semibold px-2 py-0.5 rounded-full">วิเคราะห์ตาม Workload + Skill + สังกัด</span>
+                            </div>
+
+                            <!-- Live Analysis Result Box -->
+                            <div id="smartRecommendationBox" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <!-- Populated dynamically -->
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-indigo-100">
+                                <label class="block text-xs font-semibold text-indigo-950">มอบหมายให้กราฟิก (ผู้รับผิดชอบหลัก) *</label>
+                                <select id="jobAssignee" class="w-full sm:w-1/2 bg-white border border-indigo-300 rounded-xl px-3 py-2 text-xs font-semibold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <!-- Populated dynamically with recommended badges -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">เทคนิคหลังพิมพ์ (เลือกได้)</label>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-700">
+                                <label class="flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200"><input type="checkbox" name="postTech" value="เคลือบเงา" class="rounded"> <span>เคลือบเงา</span></label>
+                                <label class="flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200"><input type="checkbox" name="postTech" value="เคลือบด้าน" class="rounded"> <span>เคลือบด้าน</span></label>
+                                <label class="flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200"><input type="checkbox" name="postTech" value="ไดคัท 50%" class="rounded"> <span>ไดคัท 50%</span></label>
+                                <label class="flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200"><input type="checkbox" name="postTech" value="ไดคัท 100%" class="rounded"> <span>ไดคัท 100%</span></label>
+                                <label class="flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200"><input type="checkbox" name="postTech" value="เจาะตาไก่" class="rounded"> <span>เจาะตาไก่</span></label>
+                                <label class="flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200"><input type="checkbox" name="postTech" value="พับขอบ" class="rounded"> <span>พับขอบ</span></label>
+                                <label class="flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200"><input type="checkbox" name="postTech" value="ตัดพอดีงาน" class="rounded"> <span>ตัดพอดีงาน</span></label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">กำหนดส่งมอบ (Due Date)</label>
+                            <input type="datetime-local" id="jobDueDate" class="w-full md:w-1/3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500" required>
+                        </div>
+
+                        <div class="pt-4 flex justify-end space-x-3">
+                            <button type="button" onclick="switchTab('jobs')" class="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">ยกเลิก</button>
+                            <button type="submit" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition flex items-center space-x-2">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                                <span>บันทึกและสร้างใบสั่งงาน</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB 4: STAFF MANAGEMENT -->
+            <div id="tab-staff" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800">จัดการข้อมูลพนักงาน & สิทธิ์การใช้งาน</h3>
+                            <p class="text-xs text-slate-500">กำหนดตำแหน่ง สิทธิ์การทำงาน สังกัด และสีประจำตัวกราฟิก</p>
+                        </div>
+                        <button onclick="openAddStaffModal()" class="restricted-head bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i>
+                            <span>เพิ่มพนักงานใหม่</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
+                                    <th class="p-3">พนักงาน</th>
+                                    <th class="p-3">ตำแหน่ง (Position)</th>
+                                    <th class="p-3">สิทธิ์ในระบบ (Role)</th>
+                                    <th class="p-3">สังกัด (Branch)</th>
+                                    <th class="p-3">สีประจำตัว</th>
+                                    <th class="p-3">งานค้างในมือ</th>
+                                    <th class="p-3 text-right">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staffTableBody" class="divide-y divide-slate-100 text-slate-700 text-xs">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: OT CALCULATOR & TIMELINE -->
+            <div id="tab-otCalc" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800">ระบบคำนวณ OT อัตโนมัติ & แจ้งเตือน 15:00 น.</h3>
+                            <p class="text-xs text-slate-500">ระบบประเมินภาระงานคงค้างเทียบกับเวลาทำการ เพื่อตัดสินใจความจำเป็นในการอยู่ OT</p>
+                        </div>
+                        <button onclick="runOTCalculation()" class="bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+                            <i data-lucide="calculator" class="w-4 h-4"></i>
+                            <span>ประเมินสถานะ OT ตอนนี้</span>
+                        </button>
+                    </div>
+
+                    <!-- OT Status Alert Box -->
+                    <div id="otResultBox" class="p-4 bg-indigo-50 border border-indigo-200 rounded-2xl mb-6">
+                        <div class="flex items-start space-x-3">
+                            <div class="p-2 bg-indigo-600 text-white rounded-xl mt-0.5">
+                                <i data-lucide="clock" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-indigo-950 text-sm">ผลประเมิน OT ประจำวันที่ 12 ต.ค. 2026 (รอบ 15:00 น.)</h4>
+                                <p class="text-xs text-indigo-800 mt-1 leading-relaxed">
+                                    ปริมาณงานทั้งหมดในคิวเหลือ 8 งาน (คิดเป็น Man-hours ประมาณ 16 ชม.) กำลังพล 3 คน สามารถเคลียร์ได้ 12 ชม. ในเวลาทำการปกติ 
+                                    <span class="font-bold text-rose-700">แนะนำ: จำเป็นต้องอยู่ OT เพิ่ม 2 คน (วิชัย, นภา) คนละ 2 ชม.</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="staffOTCards">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: REPORTS & GOOGLE SHEETS -->
+            <div id="tab-reports" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800">รายงานสรุปผลงาน & Google Sheet Sync</h3>
+                            <p class="text-xs text-slate-500">สรุปผลงานประจำสัปดาห์ / เดือน ส่งออกข้อมูลเชื่อมต่อ Google Sheets</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="exportToGoogleSheetModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                                <span>ซิงค์ไป Google Sheets</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                        <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                            <p class="text-xs text-slate-500 font-medium">สรุปงานสัปดาห์นี้</p>
+                            <h4 class="text-xl font-bold text-slate-900 mt-1">28 งาน</h4>
+                            <p class="text-xs text-emerald-600 mt-1">เสร็จทันกำหนด 27 งาน (96.4%)</p>
+                        </div>
+                        <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                            <p class="text-xs text-slate-500 font-medium">สรุปงานเดือนนี้</p>
+                            <h4 class="text-xl font-bold text-slate-900 mt-1">114 งาน</h4>
+                            <p class="text-xs text-indigo-600 mt-1">เฉลี่ยรอบแก้แบบ 1.3 รอบ</p>
+                        </div>
+                        <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                            <p class="text-xs text-slate-500 font-medium">ยอดรวม Man-Hours</p>
+                            <h4 class="text-xl font-bold text-slate-900 mt-1">342 ชม.</h4>
+                            <p class="text-xs text-cyan-600 mt-1">ต้นทุนเวลามีประสิทธิภาพ</p>
+                        </div>
+                    </div>
+
+                    <div class="border border-slate-200 rounded-2xl overflow-hidden">
+                        <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between text-xs font-semibold text-slate-600">
+                            <span>ตารางตัวอย่างข้อมูลเชื่อมโยง (Google Sheet Format Preview)</span>
+                            <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Live Connected</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-slate-700">
+                                <thead class="bg-slate-100 text-slate-500">
+                                    <tr>
+                                        <th class="p-3">Timestamp</th>
+                                        <th class="p-3">Order ID</th>
+                                        <th class="p-3">Customer</th>
+                                        <th class="p-3">Designer</th>
+                                        <th class="p-3">Type</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Revisions</th>
+                                        <th class="p-3">Actual Hours</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <tr>
+                                        <td class="p-3">12/10/2026 09:15</td>
+                                        <td class="p-3 font-semibold text-indigo-600">JOB-2026-001</td>
+                                        <td class="p-3">บริษัท เอสซีจี จำกัด</td>
+                                        <td class="p-3">สมชาย</td>
+                                        <td class="p-3">งานออกแบบใหม่</td>
+                                        <td class="p-3"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">ส่งห้องพิมพ์</span></td>
+                                        <td class="p-3">1</td>
+                                        <td class="p-3">2.5 ชม.</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3">12/10/2026 10:30</td>
+                                        <td class="p-3 font-semibold text-indigo-600">JOB-2026-002</td>
+                                        <td class="p-3">เซ็นทรัลพัฒนา</td>
+                                        <td class="p-3">วิชัย</td>
+                                        <td class="p-3">จัดทำเลย์เอ้าท์พิมพ์</td>
+                                        <td class="p-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded">ส่งปรู๊ฟตรวจสอบ</span></td>
+                                        <td class="p-3">0</td>
+                                        <td class="p-3">1.5 ชม.</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3">12/10/2026 11:00</td>
+                                        <td class="p-3 font-semibold text-indigo-600">JOB-2026-003</td>
+                                        <td class="p-3">ร้านกาแฟอเมซอน</td>
+                                        <td class="p-3">นภา</td>
+                                        <td class="p-3">จัดไฟล์ปรู๊ฟสี</td>
+                                        <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">กำลังออกแบบ/ตรวจไฟล์</span></td>
+                                        <td class="p-3">2</td>
+                                        <td class="p-3">3.0 ชม.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- JOB DETAIL / STATUS UPDATE MODAL -->
+    <div id="jobModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                <div>
+                    <h3 id="modalJobNo" class="text-lg font-bold text-slate-900">JOB-2026-001</h3>
+                    <p id="modalCustomerName" class="text-xs text-slate-500">บริษัท เอสซีจี จำกัด</p>
+                </div>
+                <button onclick="closeJobModal()" class="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div>
+                        <span class="text-slate-400 block mb-1">ประเภทงาน</span>
+                        <strong id="modalJobType" class="text-slate-800 text-sm">งานออกแบบใหม่</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block mb-1">สเปก & ขนาด</span>
+                        <strong id="modalJobSpec" class="text-slate-800 text-sm">100 x 200 ซม. | HP5800</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block mb-1">ผู้รับผิดชอบ</span>
+                        <strong id="modalJobAssignee" class="text-slate-800">สมชาย (Head)</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block mb-1">กำหนดส่ง</span>
+                        <strong id="modalJobDue" class="text-slate-800 text-rose-600">12 ต.ค. 2026, 17:00</strong>
+                    </div>
+                </div>
+
+                <!-- Status Update Flow Section -->
+                <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-3">
+                    <h4 class="font-bold text-indigo-950 text-sm flex items-center space-x-2">
+                        <i data-lucide="refresh-cw" class="w-4 h-4 text-indigo-600"></i>
+                        <span>อัปเดตสถานะงาน & ส่งปรู๊ฟ</span>
+                    </h4>
+                    
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">เปลี่ยนสถานะงาน</label>
+                        <select id="updateStatusSelect" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                            <option value="ได้รับใบสั่งงาน">ได้รับใบสั่งงาน</option>
+                            <option value="กำลังออกแบบ/ตรวจไฟล์">กำลังออกแบบ/ตรวจไฟล์</option>
+                            <option value="ส่งปรู๊ฟตรวจสอบ">ส่งปรู๊ฟตรวจสอบ (Digital PDF / Hard Proof)</option>
+                            <option value="รอแก้ไข/คอนเฟิร์ม">รอแก้ไข / ตีกลับงานจากลูกค้า</option>
+                            <option value="เตรียมไฟล์พิมพ์ (Layout)">เตรียมไฟล์พิมพ์ (Layout เหมาะสมวัสดุ)</option>
+                            <option value="ส่งห้องพิมพ์/ไดคัท">ส่งห้องพิมพ์ & ไดคัทเรียบร้อย</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">ช่องทางส่งปรู๊ฟ</label>
+                            <select id="updateProofChannel" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                                <option value="Digital PDF">Digital PDF</option>
+                                <option value="Hard Proof">Hard Proof (ตัวอย่างจริง)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">จำนวนรอบการแก้ไข (Revisions)</label>
+                            <input type="number" id="updateRevisionCount" value="1" min="0" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">บันทึกเวลาจริงที่ใช้ (Man-hours)</label>
+                        <input type="text" id="updateManHours" placeholder="เช่น 2.5 ชั่วโมง" value="2.0 ชม." class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">หมายเหตุ / บันทึกการทำงาน</label>
+                        <textarea id="updateNote" rows="2" placeholder="รายละเอียดการแก้ไขหรือสถานะ..." class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs"></textarea>
+                    </div>
+                </div>
+
+                <!-- Transfer Job (Head only) -->
+                <div id="transferJobSection" class="p-4 bg-amber-50 rounded-2xl border border-amber-200">
+                    <h4 class="font-bold text-amber-900 text-xs mb-2 flex items-center space-x-1">
+                        <i data-lucide="shuffle" class="w-4 h-4 text-amber-600"></i>
+                        <span>โอนย้ายงานให้กราฟิกคนอื่นทำแทน (Head Feature)</span>
+                    </h4>
+                    <div class="flex items-center space-x-2">
+                        <select id="transferTargetStaff" class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                            <option value="วิชัย">วิชัย (Graphic Designer)</option>
+                            <option value="นภา">นภา (Graphic Designer)</option>
+                            <option value="สมชาย">สมชาย (Head Graphic)</option>
+                        </select>
+                        <button onclick="executeTransferJob()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-xl text-xs">โอนย้ายงาน</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 mt-4 border-t border-slate-100 flex justify-between items-center">
+                <button onclick="deleteCurrentJob()" class="text-rose-600 hover:text-rose-800 text-xs font-semibold flex items-center space-x-1 restricted-head">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <span>ลบใบสั่งงานนี้</span>
+                </button>
+                <div class="space-x-2">
+                    <button onclick="closeJobModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">ปิด</button>
+                    <button onclick="saveJobUpdates()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold">บันทึกการอัปเดต</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICATIONS MODAL -->
+    <div id="notifModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <h3 class="font-bold text-slate-900 text-sm flex items-center space-x-2">
+                    <i data-lucide="bell" class="w-4 h-4 text-indigo-600"></i>
+                    <span>การแจ้งเตือนระบบ (Notifications)</span>
+                </h3>
+                <button onclick="toggleNotifModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-3 text-xs max-h-72 overflow-y-auto custom-scrollbar">
+                <div class="p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                    <div class="font-semibold text-indigo-900">งานด่วนแทรกคิวใหม่! (JOB-2026-009)</div>
+                    <p class="text-slate-600 mt-0.5">ลูกค้า SCG เพิ่มป้ายด่วน กำหนดส่ง 16:00 น. วันนี้</p>
+                    <span class="text-[10px] text-indigo-500 mt-1 block">10 นาทีที่แล้ว</span>
+                </div>
+                <div class="p-3 bg-rose-50 border border-rose-100 rounded-xl">
+                    <div class="font-semibold text-rose-900">งานถูกตีกลับ (JOB-2026-004)</div>
+                    <p class="text-slate-600 mt-0.5">ลูกค้าขอเปลี่ยนโทนสีและขนาดตัวอักษรใหม่</p>
+                    <span class="text-[10px] text-rose-500 mt-1 block">45 นาทีที่แล้ว</span>
+                </div>
+                <div class="p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                    <div class="font-semibold text-amber-900">ใกล้ถึงกำหนดส่ง (JOB-2026-002)</div>
+                    <p class="text-slate-600 mt-0.5">เหลือเวลาอีก 1 ชั่วโมงก่อนส่งห้องพิมพ์</p>
+                    <span class="text-[10px] text-amber-500 mt-1 block">1 ชั่วโมงที่แล้ว</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STAFF ADD MODAL -->
+    <div id="staffModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <h3 class="font-bold text-slate-900 text-sm flex items-center space-x-2">
+                    <i data-lucide="user-plus" class="w-4 h-4 text-indigo-600"></i>
+                    <span>เพิ่มพนักงานใหม่</span>
+                </h3>
+                <button onclick="closeStaffModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="staffForm" onsubmit="handleCreateStaff(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">ชื่อพนักงาน *</label>
+                    <input type="text" id="staffNameInput" required placeholder="เช่น ธนพล" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">ตำแหน่ง (Position)</label>
+                    <input type="text" id="staffPositionInput" required placeholder="เช่น Graphic Designer" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs" value="Graphic Designer">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">สิทธิ์ในระบบ (Role)</label>
+                    <select id="staffRoleInput" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                        <option value="graphic">Graphic Designer</option>
+                        <option value="head">Head Graphic (Admin)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">สังกัด (Branch)</label>
+                    <select id="staffBranchInput" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                        <option value="สำนักงานใหญ่">สำนักงานใหญ่</option>
+                        <option value="หน้าร้าน">หน้าร้าน</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">สีประจำตัวพนักงาน</label>
+                    <select id="staffColorInput" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+                        <option value="bg-indigo-500">สีน้ำเงิน (Indigo)</option>
+                        <option value="bg-cyan-500">สีฟ้า (Cyan)</option>
+                        <option value="bg-purple-500">สีม่วง (Purple)</option>
+                        <option value="bg-emerald-500">สีเขียว (Emerald)</option>
+                        <option value="bg-rose-500">สีชมพู (Rose)</option>
+                        <option value="bg-amber-500">สีส้ม (Amber)</option>
+                    </select>
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeStaffModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold">ยกเลิก</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">บันทึกพนักงาน</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-3 text-xs font-medium">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toastMsg">บันทึกข้อมูลสำเร็จ</span>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Mock Data Store
+        let currentUserRole = 'head'; // 'head', 'graphic1', 'graphic2'
+        let currentDashboardStaffFilter = 'all';
+        
+        let staffList = [
+            { id: 's1', name: 'สมชาย', position: 'Head Graphic', role: 'head', branch: 'สำนักงานใหญ่', color: 'bg-indigo-500', workload: 3, skills: ['1. งานออกแบบใหม่', '2. จัดทำเลย์เอ้าท์พิมพ์/ตรวจไฟล์', 'INDOOR', 'OUTDOOR', 'UV', 'Flatbed'] },
+            { id: 's2', name: 'วิชัย', position: 'Graphic Designer', role: 'graphic', branch: 'สำนักงานใหญ่', color: 'bg-cyan-500', workload: 4, skills: ['2. จัดทำเลย์เอ้าท์พิมพ์/ตรวจไฟล์', '3. จัดไฟล์ปรู๊ฟสี/ตัวอย่างงาน', 'INDOOR', 'OUTDOOR'] },
+            { id: 's3', name: 'นภา', position: 'Graphic Designer', role: 'graphic', branch: 'หน้าร้าน', color: 'bg-purple-500', workload: 2, skills: ['1. งานออกแบบใหม่', '3. จัดไฟล์ปรู๊ฟสี/ตัวอย่างงาน', 'UV', 'Flatbed'] }
+        ];
+
+        let jobList = [
+            { id: 'JOB-2026-001', customer: 'บริษัท เอสซีจี จำกัด', product: 'ป้าย Rollup หน้าร้าน', pm: 'PM-8821', sale: 'คุณก้อย', type: '1. งานออกแบบใหม่', system: 'INDOOR', printer: 'HP5800', size: '85 x 200 ซม.', qty: '1 แบบ 2 ชุด', assignee: 'สมชาย', priority: 'งานปกติ', status: 'ส่งห้องพิมพ์/ไดคัท', proofChannel: 'Digital PDF', revisions: 1, manHours: '2.5 ชม.', dueDate: '2026-10-12T17:00' },
+            { id: 'JOB-2026-002', customer: 'เซ็นทรัลพัฒนา', product: 'สติกเกอร์ติดกระจก', pm: 'PM-8822', sale: 'คุณบี', type: '2. จัดทำเลย์เอ้าท์พิมพ์/ตรวจไฟล์', system: 'OUTDOOR', printer: 'EPSON', size: '120 x 300 ซม.', qty: '3 แบบ 1 ชุด', assignee: 'วิชัย', priority: 'งานด่วน', status: 'ส่งปรู๊ฟตรวจสอบ', proofChannel: 'Digital PDF', revisions: 0, manHours: '1.5 ชม.', dueDate: '2026-10-12T15:30' },
+            { id: 'JOB-2026-003', customer: 'ร้านกาแฟอเมซอน', product: 'ป้ายเมนูบอร์ด Lightbox', pm: 'PM-8823', sale: 'คุณเอ', type: '3. จัดไฟล์ปรู๊ฟสี/ตัวอย่างงาน', system: 'UV', printer: 'Hantop', size: '60 x 90 ซม.', qty: '5 แบบ 5 ชุด', assignee: 'นภา', priority: 'งานปกติ', status: 'กำลังออกแบบ/ตรวจไฟล์', proofChannel: 'Hard Proof', revisions: 2, manHours: '3.0 ชม.', dueDate: '2026-10-13T12:00' },
+            { id: 'JOB-2026-004', customer: 'โรงพยาบาลศิริราช', product: 'ฉาก Backdrop งานประชุม', pm: 'PM-8824', sale: 'คุณก้อย', type: '1. งานออกแบบใหม่', system: 'Flatbed', printer: 'Dilican', size: '300 x 240 ซม.', qty: '1 แบบ 1 ชุด', assignee: 'วิชัย', priority: 'งานด่วนมาก', status: 'รอแก้ไข/คอนเฟิร์ม', proofChannel: 'Digital PDF', revisions: 2, manHours: '4.0 ชม.', dueDate: '2026-10-12T14:00' },
+            { id: 'JOB-2026-005', customer: 'ม.ธรรมศาสตร์', product: 'สติกเกอร์ไดคัทฉลากสินค้า', pm: 'PM-8825', sale: 'คุณบี', type: '2. จัดทำเลย์เอ้าท์พิมพ์/ตรวจไฟล์', system: 'INDOOR', printer: 'HP5800', size: '5 x 5 ซม.', qty: '10 แบบ 100 แผ่น', assignee: 'นภา', priority: 'งานปกติ', status: 'เตรียมไฟล์พิมพ์ (Layout)', proofChannel: 'Digital PDF', revisions: 0, manHours: '1.0 ชม.', dueDate: '2026-10-14T10:00' }
+        ];
+
+        let activeEditingJobId = null;
+
+        // Initialize App on Load
+        window.onload = function() {
+            lucide.createIcons();
+            renderDashboardStaffChips();
+            renderDashboardStats();
+            renderDashboardRecentJobs();
+            renderJobsTable();
+            renderStaffTable();
+            renderOTCards();
+            initCharts();
+            updateRolePermissionsUI();
+            triggerSmartAssigneeRecommendation();
+        };
+
+        // Render Dashboard Staff Chips
+        function renderDashboardStaffChips() {
+            const container = document.getElementById('dashboardStaffFilterChips');
+            if (!container) return;
+            
+            let html = `<button onclick="filterDashboardByStaff('all')" id="chip-all" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${currentDashboardStaffFilter === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'} transition">ทั้งหมด (All Team)</button>`;
+            
+            staffList.forEach(s => {
+                const isActive = currentDashboardStaffFilter === s.name;
+                html += `<button onclick="filterDashboardByStaff('${s.name}')" id="chip-${s.id}" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${isActive ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'} transition flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full ${s.color}"></span><span>${s.name}</span></button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Filter Dashboard by Individual Staff
+        function filterDashboardByStaff(staffName) {
+            currentDashboardStaffFilter = staffName;
+            renderDashboardStaffChips();
+            
+            const banner = document.getElementById('selectedStaffStatBanner');
+            const tableTitle = document.getElementById('dashboardTableTitle');
+            const tableSubtitle = document.getElementById('dashboardTableSubtitle');
+            
+            if (staffName === 'all') {
+                banner.classList.add('hidden');
+                tableTitle.innerText = 'งานเร่งด่วน & สถานะล่าสุด';
+                tableSubtitle.innerText = 'ติดตามงานที่ต้องส่งมอบวันนี้';
+            } else {
+                banner.classList.remove('hidden');
+                const staffObj = staffList.find(s => s.name === staffName);
+                if (staffObj) {
+                    document.getElementById('bannerStaffName').innerText = `${staffObj.name} (${staffObj.position})`;
+                    const staffJobs = jobList.filter(j => j.assignee === staffName);
+                    document.getElementById('bannerStaffDetails').innerText = `งานในมือ: ${staffJobs.length} งาน | สังกัด: ${staffObj.branch} | สรุปเวลาเฉลี่ย: 2.1 ชม./งาน`;
+                    document.getElementById('bannerStaffAvatar').className = `w-8 h-8 rounded-full ${staffObj.color} text-white font-bold flex items-center justify-center text-xs`;
+                    document.getElementById('bannerStaffAvatar').innerText = staffObj.name.substring(0, 2);
+                }
+                tableTitle.innerText = `รายการงานในความรับผิดชอบของ: ${staffName}`;
+                tableSubtitle.innerText = `แสดงเฉพาะงานที่มอบหมายให้ ${staffName}`;
+            }
+            renderDashboardRecentJobs();
+        }
+
+        // SMART ASSIGNEE RECOMMENDATION ENGINE
+        function calculateStaffSuitability() {
+            const selectedType = document.getElementById('jobType')?.value || '1. งานออกแบบใหม่';
+            const selectedSystem = document.getElementById('jobSystem')?.value || 'INDOOR';
+            const selectedBranch = document.getElementById('jobBranch')?.value || 'สำนักงานใหญ่';
+            const selectedPriority = document.getElementById('jobPriority')?.value || 'งานปกติ';
+
+            return staffList.map(s => {
+                const activeJobs = jobList.filter(j => j.assignee === s.name && !j.status.includes('ส่งห้องพิมพ์')).length;
+                let score = 100;
+                let reasons = [];
+
+                score -= activeJobs * 15;
+                reasons.push(`งานค้าง ${activeJobs} งาน`);
+
+                if (s.skills && s.skills.includes(selectedSystem)) {
+                    score += 20;
+                    reasons.push(`ถนัดระบบ ${selectedSystem}`);
+                }
+                if (s.skills && s.skills.includes(selectedType)) {
+                    score += 15;
+                    reasons.push(`ตรงสายประเภทงาน`);
+                }
+
+                if (s.branch === selectedBranch) {
+                    score += 15;
+                    reasons.push(`สังกัด ${selectedBranch}`);
+                } else {
+                    score -= 10;
+                    reasons.push(`คนละสังกัด (${s.branch})`);
+                }
+
+                if ((selectedPriority === 'งานด่วนมาก' || selectedPriority === 'งานแทรกคิว') && s.role === 'head') {
+                    score += 10;
+                    reasons.push(`ด่วนพิเศษ (หัวหน้าคุมเอง)`);
+                }
+
+                return {
+                    staff: s,
+                    activeJobs,
+                    score,
+                    reasonText: reasons.join(' • ')
+                };
+            }).sort((a, b) => b.score - a.score);
+        }
+
+        function triggerSmartAssigneeRecommendation() {
+            const recommendations = calculateStaffSuitability();
+            const recContainer = document.getElementById('smartRecommendationBox');
+            const assigneeSelect = document.getElementById('jobAssignee');
+
+            if (!recContainer || !assigneeSelect) return;
+
+            let html = '';
+            recommendations.forEach((item, index) => {
+                const isTop = index === 0;
+                html += `
+                    <div class="p-3 rounded-xl border ${isTop ? 'bg-emerald-50/90 border-emerald-300 ring-2 ring-emerald-400/30' : 'bg-white border-indigo-100'} text-xs relative">
+                        ${isTop ? '<span class="absolute -top-2 right-2 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm">แนะนำสูงสุด ⭐</span>' : ''}
+                        <div class="flex items-center space-x-2 font-bold text-slate-800">
+                            <span class="w-2.5 h-2.5 rounded-full ${item.staff.color}"></span>
+                            <span>${item.staff.name}</span>
+                            <span class="text-[10px] text-slate-500">(${item.staff.position})</span>
+                        </div>
+                        <div class="text-[11px] font-semibold mt-1 ${isTop ? 'text-emerald-800' : 'text-indigo-900'}">คะแนนความพร้อม: ${item.score} คะแนน</div>
+                        <p class="text-[10px] text-slate-500 mt-0.5 leading-tight">${item.reasonText}</p>
+                    </div>
+                `;
+            });
+            recContainer.innerHTML = html;
+
+            assigneeSelect.innerHTML = recommendations.map((item, idx) => `
+                <option value="${item.staff.name}" ${idx === 0 ? 'selected' : ''}>
+                    ${idx === 0 ? '⭐ [แนะนำ] ' : ''}${item.staff.name} (${item.staff.position}) — งานในมือ: ${item.activeJobs} งาน
+                </option>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        // Switch Tabs
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('bg-indigo-50', 'text-indigo-700');
+                el.classList.add('text-slate-600', 'hover:bg-slate-50', 'hover:text-indigo-600');
+            });
+            const activeBtn = document.getElementById('nav-' + tabId);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-indigo-50', 'text-indigo-700');
+                activeBtn.classList.remove('text-slate-600', 'hover:bg-slate-50', 'hover:text-indigo-600');
+            }
+
+            if(tabId === 'newJob') {
+                triggerSmartAssigneeRecommendation();
+            }
+        }
+
+        // Switch User Role Simulation
+        function switchUserRole(role) {
+            currentUserRole = role;
+            const nameEl = document.getElementById('currentUserName');
+            const roleEl = document.getElementById('currentUserRole');
+            const avatarEl = document.getElementById('currentUserAvatar');
+
+            if(role === 'head') {
+                nameEl.innerText = 'สมชาย (Head Graphic)';
+                roleEl.innerText = 'สิทธิ์: หัวหน้ากราฟิก (Admin)';
+                avatarEl.innerText = 'HG';
+            } else if(role === 'graphic1') {
+                nameEl.innerText = 'วิชัย (Graphic Designer)';
+                roleEl.innerText = 'สิทธิ์: กราฟิกดีไซเนอร์';
+                avatarEl.innerText = 'วช';
+            } else {
+                nameEl.innerText = 'นภา (Graphic Designer)';
+                roleEl.innerText = 'สิทธิ์: กราฟิกดีไซเนอร์';
+                avatarEl.innerText = 'นภ';
+            }
+            updateRolePermissionsUI();
+            showToast('สลับสิทธิ์การใช้งานเป็น: ' + nameEl.innerText);
+        }
+
+        function updateRolePermissionsUI() {
+            const restrictedHeadElements = document.querySelectorAll('.restricted-head');
+            const transferSec = document.getElementById('transferJobSection');
+            
+            if(currentUserRole !== 'head') {
+                restrictedHeadElements.forEach(el => el.style.opacity = '0.4');
+                restrictedHeadElements.forEach(el => el.style.pointerEvents = 'none');
+                if(transferSec) transferSec.style.display = 'none';
+            } else {
+                restrictedHeadElements.forEach(el => el.style.opacity = '1');
+                restrictedHeadElements.forEach(el => el.style.pointerEvents = 'auto');
+                if(transferSec) transferSec.style.display = 'block';
+            }
+        }
+
+        // Render Dashboard Stats & Tables
+        function renderDashboardStats() {
+            document.getElementById('statTotalJobs').innerText = jobList.length;
+        }
+
+        function renderDashboardRecentJobs() {
+            const tbody = document.getElementById('dashboardRecentJobsTable');
+            tbody.innerHTML = '';
+            
+            let filteredJobs = jobList;
+            if(currentDashboardStaffFilter !== 'all') {
+                filteredJobs = jobList.filter(j => j.assignee === currentDashboardStaffFilter);
+            }
+
+            if(filteredJobs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400 text-xs">ไม่พบรายการงานในความรับผิดชอบนี้</td></tr>`;
+                return;
+            }
+
+            filteredJobs.slice(0, 6).forEach(job => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50/80 transition cursor-pointer" onclick="openJobModal('${job.id}')">
+                        <td class="p-4 font-semibold text-indigo-600">${job.id}<br><span class="text-xs text-slate-500 font-normal">${job.customer}</span></td>
+                        <td class="p-4">${job.type}</td>
+                        <td class="p-4">${job.assignee}</td>
+                        <td class="p-4"><span class="px-2 py-1 rounded text-[11px] font-semibold ${getPriorityBadge(job.priority)}">${job.priority}</span></td>
+                        <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[11px] font-medium ${getStatusBadge(job.status)}">${job.status}</span></td>
+                        <td class="p-4 text-right text-xs text-slate-500">${job.dueDate.replace('T', ' ')}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderJobsTable() {
+            const tbody = document.getElementById('fullJobsTableBody');
+            tbody.innerHTML = '';
+            jobList.forEach(job => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
+                        <td class="p-3 font-semibold text-indigo-600">${job.id}<br><span class="text-slate-500 font-normal">${job.customer} (${job.product})</span></td>
+                        <td class="p-3">${job.type}<br><span class="text-[10px] text-slate-400">${job.size} | Qty: ${job.qty}</span></td>
+                        <td class="p-3 font-medium text-slate-800">${job.system}<br><span class="text-[10px] text-indigo-500">เครื่อง: ${job.printer}</span></td>
+                        <td class="p-3 font-medium">${job.assignee}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${getPriorityBadge(job.priority)}">${job.priority}</span></td>
+                        <td class="p-3"><span class="px-2 py-1 rounded-full text-[10px] font-medium ${getStatusBadge(job.status)}">${job.status}</span></td>
+                        <td class="p-3 text-center">
+                            <button onclick="openJobModal('${job.id}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-3 py-1.5 rounded-lg text-xs transition">จัดการ/อัปเดต</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function getPriorityBadge(priority) {
+            if(priority === 'งานด่วนมาก') return 'bg-rose-100 text-rose-800';
+            if(priority === 'งานแทรกคิว') return 'bg-purple-100 text-purple-800';
+            if(priority === 'งานด่วน') return 'bg-amber-100 text-amber-800';
+            return 'bg-slate-100 text-slate-700';
+        }
+
+        function getStatusBadge(status) {
+            if(status.includes('ส่งห้องพิมพ์')) return 'bg-emerald-100 text-emerald-800';
+            if(status.includes('ส่งปรู๊ฟ')) return 'bg-cyan-100 text-cyan-800';
+            if(status.includes('รอแก้ไข')) return 'bg-rose-100 text-rose-800';
+            return 'bg-blue-100 text-blue-800';
+        }
+
+        // Job Modal Actions
+        function openJobModal(jobId) {
+            activeEditingJobId = jobId;
+            const job = jobList.find(j => j.id === jobId);
+            if(!job) return;
+
+            document.getElementById('modalJobNo').innerText = job.id;
+            document.getElementById('modalCustomerName').innerText = job.customer + ' - ' + job.product;
+            document.getElementById('modalJobType').innerText = job.type;
+            document.getElementById('modalJobSpec').innerText = `${job.size} | ระบบ: ${job.system} (${job.printer})`;
+            document.getElementById('modalJobAssignee').innerText = job.assignee;
+            document.getElementById('modalJobDue').innerText = job.dueDate.replace('T', ' ');
+
+            document.getElementById('updateStatusSelect').value = job.status;
+            document.getElementById('updateProofChannel').value = job.proofChannel || 'Digital PDF';
+            document.getElementById('updateRevisionCount').value = job.revisions || 0;
+            document.getElementById('updateManHours').value = job.manHours || '2.0 ชม.';
+            document.getElementById('updateNote').value = '';
+
+            document.getElementById('jobModal').classList.remove('hidden');
+        }
+
+        function closeJobModal() {
+            document.getElementById('jobModal').classList.add('hidden');
+            activeEditingJobId = null;
+        }
+
+        function saveJobUpdates() {
+            const job = jobList.find(j => j.id === activeEditingJobId);
+            if(!job) return;
+
+            job.status = document.getElementById('updateStatusSelect').value;
+            job.proofChannel = document.getElementById('updateProofChannel').value;
+            job.revisions = parseInt(document.getElementById('updateRevisionCount').value);
+            job.manHours = document.getElementById('updateManHours').value;
+
+            closeJobModal();
+            renderDashboardRecentJobs();
+            renderJobsTable();
+            showToast('อัปเดตสถานะงาน ' + job.id + ' สำเร็จเรียบร้อย');
+        }
+
+        function executeTransferJob() {
+            const target = document.getElementById('transferTargetStaff').value;
+            const job = jobList.find(j => j.id === activeEditingJobId);
+            if(!job) return;
+
+            job.assignee = target;
+            closeJobModal();
+            renderJobsTable();
+            showToast('โอนย้ายงาน ' + job.id + ' ให้ ' + target + ' สำเร็จ');
+        }
+
+        function deleteCurrentJob() {
+            if(currentUserRole !== 'head') {
+                showToast('เฉพาะหัวหน้ากราฟิกเท่านั้นที่สามารถลบงานได้');
+                return;
+            }
+            jobList = jobList.filter(j => j.id !== activeEditingJobId);
+            closeJobModal();
+            renderDashboardStats();
+            renderDashboardRecentJobs();
+            renderJobsTable();
+            showToast('ลบใบสั่งงานเรียบร้อย');
+        }
+
+        // Create New Job
+        function handleCreateJob(event) {
+            event.preventDefault();
+            const newJob = {
+                id: document.getElementById('jobNo').value,
+                customer: document.getElementById('jobCustomer').value,
+                product: document.getElementById('jobProduct').value,
+                pm: document.getElementById('jobPM').value,
+                sale: document.getElementById('jobSale').value,
+                type: document.getElementById('jobType').value,
+                system: document.getElementById('jobSystem').value,
+                printer: document.getElementById('jobPrinter').value,
+                size: document.getElementById('jobSize').value,
+                qty: document.getElementById('jobQty').value,
+                assignee: document.getElementById('jobAssignee').value,
+                priority: document.getElementById('jobPriority').value,
+                status: 'ได้รับใบสั่งงาน',
+                proofChannel: 'Digital PDF',
+                revisions: 0,
+                manHours: '0 ชม.',
+                dueDate: document.getElementById('jobDueDate').value
+            };
+
+            jobList.unshift(newJob);
+            document.getElementById('newJobForm').reset();
+            switchTab('jobs');
+            renderDashboardStats();
+            renderDashboardRecentJobs();
+            renderJobsTable();
+            showToast('สร้างใบสั่งงานใหม่ ' + newJob.id + ' สำเร็จ');
+        }
+
+        // Render Staff Table
+        function renderStaffTable() {
+            const tbody = document.getElementById('staffTableBody');
+            tbody.innerHTML = '';
+            staffList.forEach(s => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="p-3 font-semibold text-slate-800 flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full ${s.color}"></span>
+                            <span>${s.name}</span>
+                        </td>
+                        <td class="p-3">${s.position}</td>
+                        <td class="p-3"><span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-medium">${s.role === 'head' ? 'หัวหน้า (Admin)' : 'ดีไซเนอร์'}</span></td>
+                        <td class="p-3">${s.branch}</td>
+                        <td class="p-3"><span class="w-5 h-5 rounded-md ${s.color} inline-block shadow-inner"></span></td>
+                        <td class="p-3 font-semibold text-indigo-600">${s.workload} งานในมือ</td>
+                        <td class="p-3 text-right">
+                            <button onclick="showToast('แก้ไขข้อมูลพนักงานสำเร็จ')" class="text-slate-400 hover:text-indigo-600 font-semibold">แก้ไข</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openAddStaffModal() {
+            document.getElementById('staffModal').classList.remove('hidden');
+        }
+
+        function closeStaffModal() {
+            document.getElementById('staffModal').classList.add('hidden');
+        }
+
+        function handleCreateStaff(event) {
+            event.preventDefault();
+            const newStaff = {
+                id: 's' + (staffList.length + 1),
+                name: document.getElementById('staffNameInput').value,
+                position: document.getElementById('staffPositionInput').value,
+                role: document.getElementById('staffRoleInput').value,
+                branch: document.getElementById('staffBranchInput').value,
+                color: document.getElementById('staffColorInput').value,
+                workload: 0,
+                skills: ['1. งานออกแบบใหม่', 'INDOOR', 'OUTDOOR']
+            };
+            staffList.push(newStaff);
+            document.getElementById('staffForm').reset();
+            closeStaffModal();
+            renderStaffTable();
+            renderDashboardStaffChips();
+            renderOTCards();
+            showToast('เพิ่มพนักงาน ' + newStaff.name + ' สำเร็จเรียบร้อย');
+        }
+
+        // Render OT Cards
+        function renderOTCards() {
+            const container = document.getElementById('staffOTCards');
+            container.innerHTML = staffList.map(s => `
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-bold text-slate-800 text-sm flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full ${s.color}"></span>
+                            <span>${s.name}</span>
+                        </span>
+                        <span class="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-semibold">${s.workload} งานค้าง</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-3">ภาระงานประเมิน: ${(s.workload * 2.5).toFixed(1)} ชม. (ปกติรับได้ 6 ชม./วัน)</p>
+                    <div class="flex items-center justify-between text-xs font-semibold">
+                        <span class="text-slate-600">สถานะ OT วันนี้:</span>
+                        <span class="${s.workload > 3 ? 'text-rose-600 bg-rose-50 px-2 py-0.5 rounded' : 'text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded'}">
+                            ${s.workload > 3 ? 'ต้องอยู่ OT 2 ชม.' : 'กลับเวลาปกติ'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function runOTCalculation() {
+            renderOTCards();
+            showToast('ระบบคำนวณ OT รอบ 15:00 น. เรียบร้อยแล้ว');
+        }
+
+        // Charts Initialization
+        function initCharts() {
+            const ctx1 = document.getElementById('jobTypeChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['งานออกแบบใหม่', 'จัดทำเลย์เอ้าท์พิมพ์', 'จัดไฟล์ปรู๊ฟสี'],
+                    datasets: [{
+                        data: [45, 35, 20],
+                        backgroundColor: ['#6366f1', '#06b6d4', '#a855f7'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { font: { family: 'Prompt', size: 11 } } } }
+                }
+            });
+
+            const ctx2 = document.getElementById('workloadChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['สมชาย', 'วิชัย', 'นภา'],
+                    datasets: [{
+                        label: 'จำนวนงานในมือ (Jobs)',
+                        data: [3, 4, 2],
+                        backgroundColor: '#6366f1',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+        }
+
+        // Toast Notification Helper
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function toggleNotifModal() {
+            const modal = document.getElementById('notifModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function exportToGoogleSheetModal() {
+            showToast('เชื่อมต่อและส่งออกข้อมูลไปยัง Google Sheets สำเร็จเรียบร้อย');
+        }
+
+        function filterJobs() {
+            const query = document.getElementById('jobSearchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('filterStatus').value;
+            const rows = document.querySelectorAll('#fullJobsTableBody tr');
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const matchesQuery = text.includes(query);
+                const matchesStatus = !statusFilter || text.includes(statusFilter.toLowerCase());
+                row.style.display = matchesQuery && matchesStatus ? '' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>
